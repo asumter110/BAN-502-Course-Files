@@ -1,0 +1,146 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+## Clustering
+
+### Anthony Sumter
+
+**Libraries**
+
+```{r}
+#install.packages("tidyverse","cluster", "factoextra", "dendextend")
+options(tidyverse.quiet = TRUE)
+library(tidyverse)
+library(cluster)
+library(factoextra)
+library(dendextend)
+```
+
+**Dataset**
+
+```{r}
+trucks = read.csv("trucks.csv")
+str(trucks)
+summary(trucks)
+```
+
+#### Task 1: Plot the relationship between Distance and Speeding. Describe this relationship. Does there appear to be any natural clustering of drivers?
+
+It does appear that there is natural clustering of drivers as the first cluster closer to the bottom of the X axis shows that speeding is occuring in a range of 0-100 miles driven. Compared to the second cluster which shows that speeding is occuring during approximately 125-225 miles driven.
+
+```{r}
+ggplot(trucks,aes(x=Speeding,y=Distance)) + geom_point()
+```
+
+#### Task 2: Create a new data frame (called trucks2) that excludes the Driver_ID variable and includes scaled versions of the Distance and Speeding variables. NOTE: Wrap the scale(trucks2) command in an as.data.frame command to ensure that the resulting object is a data frame. By default, scale converts data frames to lists
+
+```{r}
+trucks2 = trucks %>% select("Distance","Speeding")
+trucks2_scaled = scale(as.data.frame(trucks2))
+summary(trucks2_scaled)
+```
+
+#### Task 3 Use k-Means clustering with two clusters (k=2) to cluster the trucks2 data frame. Use a random number seed of 1234. Visualize the clusters using the fviz_cluster function. Comment on the clusters.
+
+The larger cluster out the two vizualized is cluster 1. Even with that being the case neither of the clusters are well defined or good as they are overlapping each other.
+
+```{r}
+set.seed(1234)
+clusters1 <- kmeans(trucks2_scaled, 2)
+fviz_cluster(clusters1, trucks2_scaled)
+```
+
+#### Task 4: Use the two methods from the k-Means lecture to identify the optimal number of clusters. Use a random number seed of 123 for these methods. Is there consensus between these two methods as the optimal number of clusters?
+
+Based upon the two methods that are used to find the optimal number of clusters there is a consensus that the optimal number of clusters is 4.
+
+```{r}
+set.seed(123)
+fviz_nbclust(trucks2_scaled, kmeans, method = "wss")
+```
+
+```{r}
+set.seed(123)
+fviz_nbclust(trucks2_scaled, kmeans, method = "silhouette") 
+```
+
+#### Task 5: Use the optimal number of clusters that you identified in Task 4 to create k-Means clusters. Use a random number seed of 1234. Use the fviz_cluster function to visualize the clusters.
+
+```{r}
+set.seed(1234)
+clusters2 <- kmeans(trucks2_scaled, 4)
+fviz_cluster(clusters2, trucks2_scaled)
+```
+
+#### Task 6: In words, how would you characterize the clusters you created in Task 5?
+
+It appears the clusters 1 and 3 as well as clusters 2 and 4 are overlapping each other. This is an indication that they share the same characteristics but are not well defined or good.
+
+**Dataset 2**
+```{r}
+wine = read.csv("wineprice.csv")
+wine2 = wine %>% select("Price","WinterRain","AGST","HarvestRain", "Age")
+wine2_scaled = scale(as.data.frame(wine2))
+summary(wine2_scaled)
+
+```
+
+#### Task 7: Use the two methods from Task 4 to determine the optimal number of k-Means clusters for this data. Use a random number seed of 123. Is there consensus between these two methods as the optimal number of clusters?
+
+Based upon the two methods that are used to find the optimal number of clusters there is a consensus that the optimal number of clusters is 5.
+
+```{r}
+set.seed(123)
+fviz_nbclust(wine2_scaled, kmeans, method = "wss")
+```
+
+```{r}
+set.seed(123)
+fviz_nbclust(wine2_scaled, kmeans, method = "silhouette") 
+```
+
+#### Task 8: Use the optimal number of clusters that you identified in Task 4 to create k-Means clusters. Use a random number seed of 1234. Use the fviz_cluster function to visualize the clusters.
+
+```{r}
+set.seed(1234)
+clusters3 <- kmeans(wine2_scaled, 5)
+fviz_cluster(clusters3, wine2_scaled)
+```
+
+
+#### Task 9: Use agglomerative clustering to develop a dendogram for the scaled wine data. Follow the same process from the lecture where we used a custom function to identify the distance metric that maximizes the “agglomerative coefficient”. Plot the dendogram.
+
+```{r}
+m = c( "average", "single", "complete", "ward")
+names(m) = c( "average", "single", "complete", "ward")
+
+ac = function(x) {
+  agnes(wine2_scaled, method = x)$ac
+}
+map_dbl(m, ac)
+```
+
+```{r}
+hc = agnes(wine2_scaled, method = "ward")
+pltree(hc, cex = 0.6, hang = -1, main = "Agglomerative Dendrogram")
+```
+
+```{r}
+plot(hc, cex.axis= 0.5) 
+rect.hclust(hc, k = 5, border = 2:6)
+```
+
+#### Task 10: Repeat Task 9, but with divisive clustering. 
+
+```{r}
+hc2 = diana(wine2_scaled)
+pltree(hc2, cex = 0.6, hang = -1, main = "Divisive Dendogram")
+```
+
+```{r}
+plot(hc2, cex.axis= 0.5) 
+rect.hclust(hc2, k = 5, border = 2:6)
+```
+

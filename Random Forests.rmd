@@ -1,0 +1,90 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+## Random Forests
+
+### Anthony Sumter
+
+**Libraries**
+
+```{r}
+#install.packages("tidyverse","caret", "ranger" )
+options(tidyverse.quiet = TRUE)
+library(tidyverse)
+library(caret)
+library(ranger)
+```
+
+**Dataset**
+
+```{r}
+blood = read.csv("Blood.csv")
+blood = blood %>% mutate(DonatedMarch = as_factor(as.character(DonatedMarch))) %>%
+mutate(DonatedMarch = fct_recode(DonatedMarch,"No" = "0","Yes" = "1"))
+str(blood)
+summary(blood)
+```
+
+#### Task 1: Split the dataset into training (70%) and testing (30%) sets. Use set.seed of 1234.
+
+```{r}
+blood = blood %>% drop_na()
+str(blood)
+set.seed(1234)
+train.rows2 = createDataPartition(y = blood$DonatedMarch, p=0.7, list = FALSE)
+train3 = blood[train.rows2,] 
+test3 = blood[-train.rows2,]
+```
+
+#### Task 2: Create a random forest model on the training set to predict DonatedMarch using all of the variables in the dataset. Use caret’s trainControl function to set up 10 fold cross-validation. Use a random number seed of 123. Use 100 trees (Note you can specify the number of trees by adding a line num.trees = 100 to the rf_fit block of code).
+
+```{r}
+fit_control = trainControl(method = "cv",number = 10)
+set.seed(123)  
+rf_fit = train(x=train3[,-1], y=train3$DonatedMarch,method = "ranger", importance = "permutation",trControl = fit_control, num.trees =100)
+```
+
+#### Task 3: Using varImp, what is the most important variable in the model, what is the least important?
+
+The most important variable in the model is DonatedMarch while Total_Donated is the least important.
+
+```{r}
+varImp(rf_fit)
+rf_fit
+```
+
+#### Task 4: Use the model to develop predictions on the training set. Use the “head” function to display the first six predictions.
+
+```{r}
+predRF = predict.train(rf_fit, train3)
+head(predRF)
+```
+
+#### Task 5: Use the model to create a confusion matrix using caret’s confusionMatrix function for the training set. What is the accuracy, sensitivity, and specificity of the model?
+
+The accuracy, sensitivity, and specificity of this model are all showing at 100%.
+
+```{r}
+confusionMatrix(predRF, train3$DonatedMarch, positive = "Yes")
+```
+
+#### Task 6: How does the accuracy of the model compare to a naive model that assumes that all observations are in the majority class?
+
+The accuracy compared to the naive model is a better predictor when exposed to new data at 100% while the naive model is only at 76.1%.
+
+#### Task 7: Use the model to develop predictions on the test set. Develop a confusion matrix. How does the model perform on the testing set?
+
+The model looks to perform the for the most part the same way on the test data as the model constructed based on the train model. Both models have accuracy, sensitivity, and specificity at 100%. The naive model is slightly different with the train model coming in at 76.1% while for the test model the naive model came in slightly higher at 76.3%.
+
+```{r}
+predRF_test = predict(rf_fit, newdata = test3)
+head(predRF_test)
+confusionMatrix(predRF_test, test3$DonatedMarch, positive = "Yes")
+```
+
+
+#### Task 8 Comment on how this model might be used in the “real-world.” Would you recommend this model for real-world use? What if any concerns would you have about using the model?
+
+This model could be used in the real-world with upcoming election to predict which party is likely to win. I would recommend this model if the data size is similar as the accuracy being 100% would make me confident in the results produced.Some concerns that could arise is if the data set becomes larger then it would take longer time to get a result. In addition future performance issues could arise within the specific application used to compute results.

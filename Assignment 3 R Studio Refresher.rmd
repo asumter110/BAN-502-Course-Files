@@ -1,0 +1,112 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+## R and RStudio Refresher Assignment
+
+### Anthony Sumter
+
+#### Task 1
+
+**Install and load the “tidyverse” package using the “install.packages” and “library” commands.**
+
+```{r}
+#install.packages("tidyverse")
+library(tidyverse)
+```
+
+
+#### Task 2
+
+**The ggplot2 package (part of the tidyverse set of packages) includes a dataset containing data on diamonds. Use the line of code below to read in this dataset into a data frame called diamonddata** 
+
+```{r}
+diamonddata = diamonds
+```
+
+
+#### Task 3
+
+**Using ggplot, create a scatterplot of caret (x axis) versus price (y axis). Briefly describe the relationship between these two variables.**
+
+```{r}
+ggplot(diamonddata, aes(x = carat, y = price)) +
+  geom_point()
+
+```
+
+The relationship between these two variables is that as carat size increases so does the price of the diamond as well.
+
+#### Task 4
+
+**Repeat Task 3, but in this plot color the scatterplot points by the “cut” variable. Briefly describe the relationship between these three variables (carat, price, and cut).**
+
+```{r}
+ggplot(diamonddata, aes(x = carat, y = price, color = cut)) +
+  geom_point()
+```
+It appears that the relationship between the three variables of carat, cut, and price is that the smaller the carat is the more ideal the cut is leading to a more affordable price. Also, vice versa the price increases along with a larger carat and worse cut.
+
+#### Task 5
+
+**Repeat Task 4, but in this plot facet by “color”. Briefly describe the relationship between the four variables (carat, price, cut, and color).**
+
+```{r}
+ggplot(diamonds, aes(x = carat, y = price, color = cut)) +
+  geom_point() + facet_wrap (~ color) + scale_x_log10()
+```
+Looking at this data as the color moves further up the alphabet the price and carat size goes up all the while the quality of the cut of the diamond decreases. 
+
+
+#### Task 6
+
+**Use the “readr” package (part of the tidyverse) to read-in the “InventoryData.csv” file as a data frame called “inventory”. Examine the structure and summary of the data frame.**
+
+```{r}
+library(readr)
+Inventory <- read_csv("InventoryData(1).csv")
+View(Inventory)
+```
+The Inventory data frame has a total of 13,561 observations and 6 variables with data about the inventory of various suppliers.
+
+#### Task 7
+
+**Use a filter to create a new data frame called “inventoryA” containing only inventory from Supplier**
+
+*A. How many rows are in this new data frame?*
+
+There is a total of 3,695 rows (observations).
+
+```{r}
+inventoryA <- Inventory%>%
+  filter(Supplier == "A")
+```
+
+
+#### Task 8
+
+**What does the line of code shown below do?** 
+
+```{r}
+inventoryA = mutate(inventoryA, OnHandRatio = `On Hand` / `Annual Demand`)
+```
+
+The line of code adds an additional column (variable) to the inventoryA data frame of OnHandRatio. This new variable is the result of dividing the "On Hand" variable by the "Annual Demand" variable.
+
+#### Task 9
+
+**Create a new data frame called “avg_cost” that contains the average “Cost per Unit ($)” by each “Item SKU”.**
+
+```{r}
+avg_cost <- inventoryA %>%
+group_by (`Item SKU`) %>%
+summarize (SKUAvgCost = mean(`Cost per Unit ($)`))
+```
+
+
+#### Task 10
+
+**Given your previous course experience with R/RStudio, what topics/concepts did you find to be most challenging?**
+
+Based on the previous course I would say the topics that were the most challenging was dealing with proper usage of functions such as select, rename, gather, etc.

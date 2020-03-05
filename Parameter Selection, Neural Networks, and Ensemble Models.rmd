@@ -1,0 +1,178 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+## Parameter Selection, Neural Networks, and Ensemble Models
+
+### Anthony Sumter
+
+**Libraries**
+
+```{r}
+#install.packages("tidyverse","caret", "nnet", "rpart", "caretEnsemble", "ranger" )
+options(tidyverse.quiet = TRUE)
+library(tidyverse)
+library(caret)
+library(nnet)
+library(rpart)
+library(caretEnsemble)
+library(ranger)
+```
+
+**Dataset**
+
+```{r}
+parole = read.csv("parole.csv")
+parole = parole %>% mutate(male = as_factor(as.character(male)), race = as_factor (as.character (race)), state = as_factor(as.character (state)), crime = as_factor(as.character (crime)), multiple.offenses = as_factor(as.character(multiple.offenses)), violator = as_factor(as.character(violator))) %>%
+mutate(male = fct_recode(male,"female" = "0","male" = "1")) %>% mutate(race = fct_recode(race,"White" = "1","Otherwise" = "2"))%>% mutate(state = fct_recode(state,"OtherState" = "1","Kentucky" = "2", "Louisiana"= "3", "Virgina" = "4"))%>% mutate(crime = fct_recode(crime,"OtherCrime" = "1", "Larceny" = "2", "DrugRelated" = "3", "DrivingRelated" = "4")) %>% mutate(multiple.offenses = fct_recode(multiple.offenses,"Otherwise" = "0", "MultipleOffenses" = "1")) %>% mutate(violator = fct_recode(violator,"Violated" = "1", "NonViolated" = "0"))
+str(parole)
+summary(parole)
+```
+
+#### Task 1: Split the data into training and testing sets. Your training set should have 70% of the data. Use a random number (set.seed) of 12345.
+
+```{r}
+parole = parole %>% drop_na()
+str(parole)
+set.seed(12345)
+train.rows = createDataPartition(y = parole$violator, p=0.7, list = FALSE)
+train = parole[train.rows,] 
+test = parole[-train.rows,]
+```
+
+#### Task 2: Create a neural network to predict parole violation. Use a size of 12 (corresponding roughly to the number of variables, including dummy variables) and a decay rate of 0.1. Use caret to implement 10-fold k-fold cross-validation. Use a random number seed of 1234. To suppress all of the text describing model convergence, add the command: trace = FALSE after verbose = FALSE. Hint: Use matrix notation to define x and y and use as.data.frame to convert your x variable to a data frame. This avoids passing a tibble to nnet package and seeing a warning message.
+
+
+```{r}
+start_time = Sys.time()
+fitControl = trainControl(method = "cv", 
+                           number = 10)
+nnetGrid =  expand.grid(size = seq(from = 2, to = 12, by = 1), decay = seq(from = 0.1, to = 0.5, by = 0.1))
+nnetBasic = train(x=as.data.frame(train[,-9]), y=as.matrix(train$violator),
+                 method = "nnet",
+                 tuneGrid = nnetGrid,
+                 trControl = fitControl,
+                 verbose = FALSE, 
+                 trace = FALSE)
+
+end_time = Sys.time()
+end_time-start_time
+```
+
+
+#### Task 3 Use your model from Task 2 to develop predictions on the training set. Use caret’s confusionMatrix function to evaluate the model quality. Comment on the model quality.
+
+The predictions would be an significant gain of 5% compared to the naive rate of 88% increasing the accuracy of the predictions to 93%. This could indicate that the data is overfitted.
+
+```{r}
+predNetBasic = predict(nnetBasic, train)
+confusionMatrix(predNetBasic, train$violator, positive = "Violated")
+```
+
+
+#### Task 4: Create a neural network to predict parole violation. Use a grid to search sizes 1 through 12 (by 1) and decay rates of 0.1 to 0.5 (by 0.1). Use caret to implement 10-fold k-fold cross-validation. Use a random number seed of 1234. To suppress all of the text describing model convergence, add the command: trace = FALSE after verbose = FALSE. Note: This model make take some time to run! Be patient, particularly if you are using an older computer. Hint: Use matrix notation to define x and y and use as.data.frame to convert your x variable to a data frame. This avoids passing a tibble to nnet package and seeing a warning message.
+
+
+```{r}
+start_time = Sys.time()
+fitControl = trainControl(method = "cv", 
+                           number = 10)
+nnetGrid =  expand.grid(size = seq(from = 2, to = 12, by = 1),
+                        decay = seq(from = 0.1, to = 0.5, by = 0.1))
+set.seed(1234)
+nnetFit = train(x=as.data.frame(train[,-9]), y=as.matrix(train$violator),
+                 method = "nnet",
+                 trControl = fitControl,
+                 tuneGrid = nnetGrid,
+                 verbose = FALSE, trace = FALSE)
+
+end_time = Sys.time()
+end_time-start_time
+```
+
+
+#### Task 5: Use your model from Task 4 to develop predictions on the training set. Use caret’s confusionMatrix function to evaluate the model quality. Comment on the model quality.
+
+The predictions would be an marginal gain of 1% compared to the naive rate of 88% increasing the accuracy of the predictions to 89%. This could indicate that the data is not overfitted.
+
+```{r}
+predNet = predict(nnetFit, train)
+confusionMatrix(predNet, train$violator, positive = "Violated")
+```
+
+
+#### Task 6: Use your model from Task 2 to develop predictions on the testing set. Use the confusionMatrix command to assess and comment on the quality of the model.
+
+The predictions would be an significant gain of 3% compared to the naive rate of 88% increasing the accuracy of the predictions to 91%. This could indicate that the data is overfitted.
+
+```{r}
+predNetBasic_test = predict(nnetBasic, newdata = test)
+confusionMatrix(predNetBasic_test, test$violator, positive = "Violated")
+```
+
+
+
+#### Task 7: Use your model from Task 4 to develop predictions on the testing set. Use the confusionMatrix command to assess and comment on the quality of the model.
+
+The predictions would be an marginal gain of 2% compared to the naive rate of 88% increasing the accuracy of the predictions to 90%. This could indicate that the data is not overfitted.
+
+```{r}
+predNet_test = predict(nnetFit, newdata = test)
+confusionMatrix(predNet_test, test$violator, positive = "Violated")
+```
+
+
+#### Task 8: Comment on whether there appears to be overfitting in one or both of your models from Tasks 2 and 4.
+
+It would appear that the model from task 2 has some signs of overfitting while the model from task 4 does not.
+
+#### Task 9: Build an ensemble (not stacked) model. To save time, use 5 folds in your k-fold cross-validation. Your random number seed should be set to 111. Use matrix notation to define the x and y variables for your model. When creating your model_list, use glm, ranger, rpart, and nnet models. Hint: Use matrix notation to define x and y and use as.data.frame to convert your x variable to a data frame. This avoids passing a tibble to nnet package and seeing a warning message.These lines of code do some rough parameter tuning for the random forest, classification tree, and neural network models. How correlated are the models in the ensemble? How does the ensemble perform (with regard to AUC) versus the individual models in the ensemble? Be sure to evaluate ensemble model performance on the training and testing sets.
+
+Wasn't able to get code to run correctly.
+
+```{r}
+  control = trainControl(
+  method = "cv",
+  number = 5,
+  savePredictions = "final",
+  classProbs = TRUE,
+  summaryFunction = twoClassSummary
+  )
+```
+
+
+
+```{r}
+start_time = Sys.time()
+set.seed(111)
+#model_list = caretList(x=as.data.frame(train[,-9]), y=as.matrix(train$violator),
+#metric = "ROC",
+#data = train,
+#trControl= control, 
+#methodList = "glm",
+#tuneList=list(rf = caretModelSpec(method="ranger", tuneLength=6)),
+#rpart = caretModelSpec(method="rpart", tuneLength=6),
+#nn = caretModelSpec(method="nnet", tuneLength=6, trace=FALSE))
+
+end_time = Sys.time ()
+end_time-start_time
+```
+
+
+#### Task 10: Build a stacked ensemble model. To save time, use 5 folds in your k-fold cross-validation. Your random number seed should be set to 111. Use matrix notation to define the x and y variables for your model. When creating your model_list, use glm, ranger, rpart, and nnet models. Hint: Use matrix notation to define x and y and use as.data.frame to convert your x variable to a data frame. This avoids passing a tibble to nnet package and seeing a warning message. How does the ensemble perform (with regard to AUC) versus the individual models in the ensemble? How does the model perform on the training and testing sets?
+
+Wasn't able to get code to run correctly.
+```{r}
+#stack = caretStack(
+  #model_list,
+  #method ="glm", 
+  #metric ="ROC",
+  #trControl = trainControl(
+    #method = "cv", #k-fold cross-validation
+    #number = 5, #5 folds
+    #savePredictions = "final",
+    #classProbs = TRUE, #save probabilities
+    #summaryFunction = twoClassSummary #calculate AUC values)
+```
+

@@ -1,0 +1,105 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+## Multiple Linear Regression and Correlation
+
+### Anthony Sumter
+
+Libraries
+```{r}
+#install.packages("tidyverse","GGally","car","MASS", "gridExtra")
+library(tidyverse)
+library(GGally)
+library(car)
+library(MASS)
+library(gridExtra)
+```
+
+
+#### Task 1
+
+Read in the data from the “hour.csv” file into a data frame/tibble named “bike”. Convert “season” using the code.Convert “yr”, “mnth”, and “hr” to factors. You do NOT need to recode (rename) the levels of these factors.Convert the “holiday” variable to a factor and recode the levels from 0 to “NotHoliday” and 1 to “Holiday”.Convert “workingday” to a factor and recode the levels from 0 to “NotWorkingDay” and 1 to “WorkingDay”. Convert “weathersit” to a factor and recode the levels. Level 1 should be “NoPrecip”, 2 should become “Misty”, 3 should become “LightPrecip”, and 4 should become “HeavyPrecip”. Convert the “weekday” variable to a factor and recode the levels. Note that 6 is “Saturday” and 0 is “Sunday”. The rest of the days of the week are from 1 to 5, starting with “Monday”. Comment as to why we convert “yr”, “mnth”, and “hr” into factors? Why not just leave them as numbers? 
+
+**It is better to convert these variables into factors because it will be more efficient to to use in the regression. The model will fit better and probably deliver better predictions.**
+
+```{r}
+bike = read_csv("hour.csv")
+bike = bike %>% mutate(season = as_factor(as.character(season))) %>%
+mutate(season = fct_recode(season,
+"Spring" = "1",
+"Summer" = "2",
+"Fall" = "3",
+"Winter" = "4"))
+bike = bike %>% mutate(yr = as_factor(as.character(yr)), mnth = as_factor (as.character (mnth)), hr = as_factor(as.character (hr)), holiday = as_factor(as.character (holiday)), workingday = as_factor(as.character(workingday)), weathersit = as_factor(as.character(weathersit)), weekday = as_factor(as.character(weekday))) %>%
+mutate(holiday = fct_recode(holiday,"NotHoliday" = "0","Holiday" = "1")) %>% mutate(workingday = fct_recode(workingday,"NotWorkingDay" = "0","WorkingDay" = "1"))%>% mutate(weathersit = fct_recode(weathersit,"NoPrecip" = "1","Misty" = "2", "LightPrecip"= "3", "HeavyPrecip" = "4"))%>% mutate(weekday = fct_recode(weekday,"Sunday" = "0", "Monday" = "1", "Tuesday" = "2", "Wednesday" = "3", "Thursday" = "4", "Friday" = "5", "Saturday" = "6"))
+```
+
+
+#### Task 2
+
+Which of the quantitative variables appears to be best correlated with “count”?
+
+**It appears that the variables best correlated with count are temp and atemp.**
+
+```{r}
+bp<-ggplot(chicago2, aes(x=C, y=Arrest, fill=Category)) + geom_bar(stat="identity") + 
+  theme(axis.text.x=element_blank()) + geom_text_repel(data=df_category, aes(label=Category))
+bp
+```
+
+
+#### Task 3
+
+We cannot use correlation to assess the relationship between a categorical predictor variable and our response variable. One option is to visualize the relationship between the categorical and response variables via a boxplot (or similar visualization). Conduct a boxplot-based analysis for each of the categorical variables.Which variables appear to affect “count”? Provide a brief explanation as to why you believe that each variable
+does or does not affect “count” (use your intution to help you answer this question). I strongly suggest using grid.arrange to reduce the space needed for your plots.
+
+**The season variable does affect bike sharing because the summer and fall months tend to produce better weather making people more likely to ride a bike. The Year doesn't affect it because you are only evaluating two years worth of data (very limited). Months affect bike sharing as, just like the season variable,the count rises in the nicer weather months. Hours affect bike sharing as the most busiest rides take place during work hours to get to work and to get home from work. Holiday affects bike sharing because on non holidays people will more likely need to use the service becuase of having to work, if its a holiday people aren't working so no need for a bike. Working Day affects bike sharing for the same reasons as previously mentioned for holidays; if you have to work you need to find a way to get there, if your not working theres not a strong need. The weather affects bike sharing because if it's bad weather conditions it becomes dangeourous to ride and people are less likely to take the risk of getting into an accident due to poor weather. Weekday affects the count because there is a greater need to use a bike as Monday through Friday is generally accepted as a typical work week; Saturday and Sunday are not always factored into the work week lessening the need to use a bike sharing service.**
+
+```{r}
+ggplot(chicago2, aes(x=Domestic,y=Arrest)) + geom_boxplot()
+```
+
+
+#### Task 4
+
+Use forward stepwise regression to build a multiple linear regression model to predict “count”.What variables are included in your forward model? Comment on the quality of the model. Does the modelmatch our intuition/common sense? Is there evidence of multicollinearity?
+
+**The variables that are included in the forward model are hr, temp, atemp, hum, mnth, season, yr, weathersit, windspeed, holiday, workingday, and weekday. The model quality is pretty good based on the r squared value being .69 and the p value being less than .05. The model does happen to match common sense even though there is evidence of multicollinearity as proof by various variables having negative coefficients.**
+
+```{r}
+bike2 = bike %>% dplyr::select(-c(instant, dteday, registered, casual))
+
+allmod = lm(count ~., bike2) 
+
+emptymod = lm(count ~1, bike2) 
+
+forwardmod = stepAIC(emptymod, direction = "forward", scope=list(upper=allmod,lower=emptymod),trace = TRUE) 
+summary(forwardmod) 
+```
+
+
+#### Task 5
+
+Repeat Task 4, but for backward stepwise. Does this model differ from the forward model? If so,how?
+
+**The model does differ from the previous model as it takes into consideration only 11 variables versus 12 in the forward stepwise.Even with that being the case it still procduces the same result of the model quality being pretty good based on the r squared value being .69 and the p value being less than .05 and shows evidence of multicollinearity with  various variables having negative coefficients.**
+
+```{r}
+backmod = stepAIC(allmod, direction = "backward", trace = TRUE)
+summary(backmod)
+```
+
+
+#### Task 6
+
+If you look carefully, you will notice that the coefficients and p value for “workingday” in the model with all of the predictors (the model used to begin the backward stepwise approach) are listed as “NA”. This is typically a sign that that variable is perfectly correlated with another variable and is, thus, being “kicked out” of the model. Describe how “workingday” is represented in the model via other variables.
+
+**Working day is represented in the model via other variables such as weekday (Sunday-Friday) and hours (1-23). The working day is conducted during the weekday and work is done betwen those specific hours.**
+
+#### Task 7
+
+Comment on the usability of this model. Any cautions concerning its potential use?
+
+**The usuability of this model is pretty good as being supported by a decent r squared value and a significant p value. The cautions concerning the potential use is the presence of multicolinearity because it can become difficult to determine how each predictor affects the respone of bike sharing.**

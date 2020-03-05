@@ -1,0 +1,96 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+## Model Validation
+
+### Anthony Sumter
+
+```{r}
+#install.packages("tidyverse","MASS", "caret")
+library(tidyverse)
+library(MASS)
+library(caret)
+```
+
+```{r}
+bike = read_csv("hour.csv")
+bike = bike %>% mutate(season = as_factor(as.character(season))) %>%
+mutate(season = fct_recode(season,
+"Spring" = "1",
+"Summer" = "2",
+"Fall" = "3",
+"Winter" = "4"))
+bike = bike %>% mutate(yr = as_factor(as.character(yr)), mnth = as_factor (as.character (mnth)), hr = as_factor(as.character (hr)), holiday = as_factor(as.character (holiday)), workingday = as_factor(as.character(workingday)), weathersit = as_factor(as.character(weathersit)), weekday = as_factor(as.character(weekday))) %>%
+mutate(holiday = fct_recode(holiday,"NotHoliday" = "0","Holiday" = "1")) %>% mutate(workingday = fct_recode(workingday,"NotWorkingDay" = "0","WorkingDay" = "1"))%>% mutate(weathersit = fct_recode(weathersit,"NoPrecip" = "1","Misty" = "2", "LightPrecip"= "3", "HeavyPrecip" = "4"))%>% mutate(weekday = fct_recode(weekday,"Sunday" = "0", "Monday" = "1", "Tuesday" = "2", "Wednesday" = "3", "Thursday" = "4", "Friday" = "5", "Saturday" = "6"))
+```
+
+#### Task 1
+
+**Split the data into training and testing sets. Your training set should have 70% of the data. Use a random number (set.seed) of 1234.**
+
+```{r}
+bike = bike %>% drop_na()
+str(bike)
+set.seed(1234)
+train.rows1 = createDataPartition(y = bike$count, p=0.7, list = FALSE)
+train1 = bike[train.rows1,] 
+test1 = bike[-train.rows1,]
+```
+
+#### Task 2
+
+**How many rows of data are in each set (training and testing)?**
+In the training set there are 12,167 rows of data versus the testing set which has 5,212 rows of data.
+
+#### Task 3
+
+**Build a linear regression model (using the training set) to predict “count” using the variables “season”, “mnth”, “hr”, “holiday”, and “weekday”, “temp”, and “weathersit”. Comment on the quality of the model. Be sure to note the Adjusted R-squared value.**
+
+The model quality is pretty good based on the r squared value being .62 and the p value being less than .05.
+
+```{r}
+mod1 = lm(count ~ season + mnth + hr + holiday + weekday + temp + weathersit, train1) 
+summary(mod1)
+```
+
+#### Task 4
+
+**Use the predict functions to make predictions (using your model from Task 3) on the training set. Use the “head” function to display the first six predictions. Hint: Be sure to store the predictions in an object, perhaps named “predict_train” or similar. Comment on the predictions.**
+
+Based upon the predictions it appears the training set using the identified variables would produce a negative count of bike rides per day more times than not.
+
+```{r}
+predict_train = predict(mod1, newdata = train1, interval = "predict")
+head(predict_train,6)
+```
+
+#### Task 5
+
+**Use the predict functions to make predictions (using your model from Task 3) on the testing set. Use the “head” function to display the first six predictions. Hint: Be sure to store the predictions in an object, perhaps named “predict_test” or similar. Comment on the predictions.**
+
+Based upon the predictions it appears the testing set using the identified variables would produce a positive count of bike rides per day more times than not.
+
+```{r}
+predict_test = predict(mod1, newdata = test1, interval = "predict")
+head(predict_test,6)
+```
+
+#### Task 6
+
+**Manually calculate the R squared value on the testing set. Comment on how this value compares to the model’s performance on the training set.**
+
+The manual R sqaured value compared to the model's performance on the training set is significantly less and this would indicate that it will less than likely perform well on a new set of data.
+
+```{r}
+SSE = sum((test1$count - predict_test)^2)
+SST = sum((test1$count - mean(test1$count))^2) 
+1 - SSE/SST
+```
+
+#### Task 7
+
+**Describe how k-fold cross-validation differs from model validation via a training/testing split.**
+
+K-fold cross- validation differs from a training/testing split because it generally results in a less biased result and allows you to do the validation process over and over again to see how model performace may differ across various partitions.
